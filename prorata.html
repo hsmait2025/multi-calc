@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2980b9" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Pro-Rata Calculator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #eef2f3, #8e9eab);
+      color: #333;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: auto;
+      background: #fff;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 24px;
+      color: #2c3e50;
+      font-size: 20px;
+    }
+
+    label {
+      font-weight: 600;
+      margin-top: 16px;
+      display: block;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 16px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    .button-row {
+      margin-top: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    button {
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background: #3498db;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    .result {
+      margin-top: 24px;
+      padding: 16px;
+      background: #fdfdfd;
+      border-left: 4px solid #2980b9;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    h3 {
+      margin-top: 20px;
+      color: #2c3e50;
+      font-size: 16px;
+    }
+
+    @media (min-width: 600px) {
+      .button-row {
+        flex-direction: row;
+        justify-content: space-between;
+      }
+
+      button {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📆 Pro-Rata Calculator</h2>
+
+    <label for="startDate">Start Date</label>
+    <input type="date" id="startDate" />
+
+    <label for="endDate">End Date</label>
+    <input type="date" id="endDate" />
+
+    <label for="totalAmount">Total Amount (₹)</label>
+    <input type="number" id="totalAmount" placeholder="Enter total amount" />
+
+    <div class="button-row">
+      <button onclick="calculateProrata()">Calculate</button>
+      <button onclick="downloadCSV()">Download CSV</button>
+    </div>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    let csvRows = [];
+
+    function calculateProrata() {
+      const startInput = document.getElementById('startDate').value;
+      const endInput = document.getElementById('endDate').value;
+      const totalAmount = parseFloat(document.getElementById('totalAmount').value);
+      const resultDiv = document.getElementById('result');
+      csvRows = [];
+
+      if (!startInput || !endInput || isNaN(totalAmount)) {
+        resultDiv.innerHTML = '❗ Please enter valid start/end dates and total amount.';
+        return;
+      }
+
+      const startDate = new Date(startInput);
+      const endDate = new Date(endInput);
+
+      if (endDate < startDate) {
+        resultDiv.innerHTML = '⚠️ End date must be after start date.';
+        return;
+      }
+
+      const totalDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      const oneDayAmount = totalAmount / totalDays;
+
+      let output = `<strong>Total Duration:</strong> ${totalDays} day(s)<br>`;
+      output += `<strong>Total Amount:</strong> ₹${totalAmount.toFixed(2)}<br>`;
+      output += `<strong>One Day Amount:</strong> ₹${oneDayAmount.toFixed(2)}<br>`;
+
+      csvRows.push(["Summary", "Value"]);
+      csvRows.push(["Total Duration (days)", totalDays]);
+      csvRows.push(["Total Amount", totalAmount.toFixed(2)]);
+      csvRows.push(["One Day Amount", oneDayAmount.toFixed(2)]);
+      csvRows.push([]);
+
+      output += `<h3>🔹 Financial Year Breakdown</h3>`;
+      csvRows.push(["Financial Year", "Days", "Amount"]);
+
+      let currentFYStartYear = (startDate.getMonth() + 1 >= 4) ? startDate.getFullYear() : startDate.getFullYear() - 1;
+
+      while (true) {
+        const fyStart = new Date(`${currentFYStartYear}-04-01`);
+        const fyEnd = new Date(`${currentFYStartYear + 1}-03-31`);
+        const actualStart = new Date(Math.max(fyStart, startDate));
+        const actualEnd = new Date(Math.min(fyEnd, endDate));
+
+        if (actualStart <= actualEnd) {
+          const daysInFY = Math.floor((actualEnd - actualStart) / (1000 * 60 * 60 * 24)) + 1;
+          const prorataAmount = daysInFY * oneDayAmount;
+          const fyLabel = `FY ${currentFYStartYear}-${(currentFYStartYear + 1).toString().slice(-2)}`;
+          output += `<strong>${fyLabel}</strong>: ${daysInFY} day(s), ₹${prorataAmount.toFixed(2)}<br>`;
+          csvRows.push([fyLabel, daysInFY, prorataAmount.toFixed(2)]);
+        }
+
+        if (fyEnd >= endDate) break;
+        currentFYStartYear += 1;
+      }
+
+      output += `<h3>📅 Month-wise Breakdown</h3>`;
+      csvRows.push([]);
+      csvRows.push(["Month", "Year", "Days", "Amount"]);
+
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      let monthCursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+      while (monthCursor <= endDate) {
+        const monthStart = new Date(monthCursor.getFullYear(), monthCursor.getMonth(), 1);
+        const monthEnd = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 0);
+
+        const actualStart = new Date(Math.max(monthStart, startDate));
+        const actualEnd = new Date(Math.min(monthEnd, endDate));
+
+        if (actualStart <= actualEnd) {
+          const daysInMonth = Math.floor((actualEnd - actualStart) / (1000 * 60 * 60 * 24)) + 1;
+          const amountInMonth = daysInMonth * oneDayAmount;
+          const label = `${months[monthCursor.getMonth()]}-${monthCursor.getFullYear()}`;
+          output += `${label}: ${daysInMonth} day(s), ₹${amountInMonth.toFixed(2)}<br>`;
+          csvRows.push([months[monthCursor.getMonth()], monthCursor.getFullYear(), daysInMonth, amountInMonth.toFixed(2)]);
+        }
+
+        monthCursor.setMonth(monthCursor.getMonth() + 1);
+      }
+
+      resultDiv.innerHTML = output;
+    }
+
+    function downloadCSV() {
+      if (csvRows.length === 0) {
+        alert("Please calculate first before downloading.");
+        return;
+      }
+
+      let csvContent = "data:text/csv;charset=utf-8," + csvRows.map(e => e.join(",")).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "prorata_breakdown.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>

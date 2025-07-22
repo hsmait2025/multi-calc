@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#2c3e50" />
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log("✅ Service Worker Registered"));
+  }
+</script>
+
+  <meta charset="UTF-8" />
+  <title>Combined App: Dropdown Switcher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #eef2f3;
+    }
+
+    .app-switcher {
+      background: #2c3e50;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .app-switcher select {
+      width: 100%;
+      max-width: 360px;
+      padding: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      background: #ecf0f1;
+      color: #2c3e50;
+    }
+
+    .tab-content {
+      display: none;
+      height: calc(100vh - 64px);
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    iframe {
+      border: none;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-switcher">
+    <select id="appSelect">
+      <option value="prorata">📆 Pro-Rata Calculator</option>
+      <option value="cart">🧮 Price Calculator</option>
+    </select>
+  </div>
+
+  <div id="prorata" class="tab-content active">
+    <iframe src=prorata.html></iframe>
+  </div>
+
+  <div id="cart" class="tab-content">
+    <iframe src=cart.html></iframe>
+  </div>
+
+  <script>
+    const select = document.getElementById("appSelect");
+    const tabs = document.querySelectorAll(".tab-content");
+
+    select.addEventListener("change", () => {
+      tabs.forEach(tab => tab.classList.remove("active"));
+      document.getElementById(select.value).classList.add("active");
+    });
+  </script>
+</body>
+</html>
